@@ -13,8 +13,9 @@ public class Solver {
 
     private boolean isSolvable = true;
     private int moves = 0;
-    public Board initialBoard;
+    private Board initialBoard;
     private Stack<SearchNode> solution = new Stack<SearchNode>();
+    private List<Board> predecessors = new ArrayList<Board>();
 
     private Comparator<SearchNode> boardComparator = new Comparator<SearchNode>() {
 
@@ -46,26 +47,19 @@ public class Solver {
         SearchNode current = snInitial;
         SearchNode previous = current;
 
-        int shortPath;
-        int prevShortPath = Integer.MAX_VALUE;
-
         MinPQ<SearchNode> queue = new MinPQ<SearchNode>(boardComparator);
-        //queue.insert(snInitial);
         solution.push(snInitial);
 
-        while (!current.board.isGoal()){
-            current = findNext(current, previous, queue, Integer.MAX_VALUE);
-        }
-/*
+        findNext(current, previous, queue, Integer.MAX_VALUE);
+    } // find a solution to the initial board (using the A* algorithm)
+
+    private void findNext(SearchNode current, SearchNode previous, MinPQ<SearchNode> queue, int shortPath) {
         while (!current.board.isGoal()) {
             moves++;
-            // SearchNode minPriorSn = queue.delMin();
-            // solution.push(minPriorSn);
-
-            shortPath = Integer.MAX_VALUE;
-
             for (Board b : current.board.neighbors()) {
-                if (b.equals(previous.board) || b.equals(initial)) {
+                if (b.equals(previous.board) ||
+                    b.equals(initialBoard)) //|| containsDuplicate(b))
+                {
                     continue;
                 }
                 int priority = b.manhattan();
@@ -83,71 +77,28 @@ public class Solver {
 
             if (current.move != moves) {
                 shortPath = Integer.MAX_VALUE;
-            }
-
-
-            if (prevShortPath < shortPath) {
-
-                while (!queue.isEmpty() && queue.min().move != 1) {
-                   queue.delMin();
+                while (current.move > moves) {
+                    current = queue.delMin();
                 }
-
-                current = queue.delMin();
-                moves = 1;
-
-                while (!queue.isEmpty() && queue.min().move != 1) {
-                    queue.delMin();
-                }
-
-                while (solution.size() != moves) {
+                while (current.move != moves) {
+                    moves--;
                     solution.pop();
+                    //predecessors.remove(s.board);
                 }
-
-                prevShortPath = Integer.MAX_VALUE; // current.move + current.priority;
-                StdOut.println("wrong path");
-            } else {
-                prevShortPath = shortPath;
-                StdOut.println(current.board);
             }
 
             solution.push(current);
+            //predecessors.add(current.board);
         }
-*/
-    } // find a solution to the initial board (using the A* algorithm)
+    }
 
-    private SearchNode findNext(SearchNode current, SearchNode previous, MinPQ<SearchNode> queue, int shortPath) {
-        moves++;
-        for (Board b : current.board.neighbors()) {
-            if (b.equals(previous.board) || b.equals(initialBoard)) {
-                continue;
-            }
-            int priority = b.manhattan();
-            SearchNode sn = new SearchNode(priority, moves, b);
-            queue.insert(sn);
-
-            int c = maxPriority(shortPath, priority);
-            if (c > 0) {
-                shortPath = c;
+    private boolean containsDuplicate(Board board) {
+        for (Board b : predecessors ) {
+            if (b.equals(board)) {
+                return true;
             }
         }
-
-        previous = current;
-        current = queue.delMin();
-
-        if (current.move != moves) {
-            shortPath = Integer.MAX_VALUE;
-            solution.pop();
-            moves--;
-        }
-
-        solution.push(current);
-
-        if (!current.board.isGoal()) {
-            return findNext(current, previous, queue, shortPath);
-        }
-        else {
-            return current;
-        }
+        return false;
     }
 
     private int maxPriority(int currMax, int priority) {
