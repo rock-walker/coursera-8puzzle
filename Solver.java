@@ -27,14 +27,16 @@ public class Solver {
     };
 
     private class SearchNode {
-        SearchNode(int priority, int move, Board board) {
+        SearchNode(int priority, int move, Board board, SearchNode parent) {
             this.priority = priority;
             this.move = move;
             this.board = board;
+            this.parent = parent;
         }
         public int priority;
         public int move;
         public Board board;
+        public SearchNode parent;
     }
 
     public Solver(Board initial) {
@@ -42,7 +44,7 @@ public class Solver {
             throw new java.lang.IllegalArgumentException();
         }
         initialBoard = initial;
-        SearchNode snInitial = new SearchNode(0, moves, initial);
+        SearchNode snInitial = new SearchNode(0, moves, initial, null);
 
         SearchNode current = snInitial;
         SearchNode previous = current;
@@ -54,16 +56,17 @@ public class Solver {
     } // find a solution to the initial board (using the A* algorithm)
 
     private void findNext(SearchNode current, SearchNode previous, MinPQ<SearchNode> queue, int shortPath) {
+        boolean isSinked = false;
+
         while (!current.board.isGoal()) {
             moves++;
             for (Board b : current.board.neighbors()) {
-                if (b.equals(previous.board) ||
-                    b.equals(initialBoard)) //|| containsDuplicate(b))
+                if (b.equals(previous.board) || b.equals(initialBoard))
                 {
                     continue;
                 }
                 int priority = b.manhattan();
-                SearchNode sn = new SearchNode(priority, moves, b);
+                SearchNode sn = new SearchNode(priority, moves, b, current);
                 queue.insert(sn);
 
                 int c = maxPriority(shortPath, priority);
@@ -75,30 +78,79 @@ public class Solver {
             previous = current;
             current = queue.delMin();
 
+            isSinked = false;
             if (current.move != moves) {
                 shortPath = Integer.MAX_VALUE;
-                while (current.move > moves) {
+                //if (current.move > moves) {
                     current = queue.delMin();
-                }
+                //}
+                moves = current.move;
+                /*
                 while (current.move != moves) {
                     moves--;
                     solution.pop();
-                    //predecessors.remove(s.board);
+                    isSinked = true;
+                }*/
+            }
+/*
+            if (isSinked) {
+                moves--;
+                continue;
+            }
+            if (current.move == 1) {
+                solution.push(current);
+                continue;
+            }
+
+            boolean isNeighbourFound = false;
+            //Iterable<Board> neighbours = solution.peek().board.neighbors();
+            Board prevBoard = solution.peek().board;
+
+            while (current.parent != null && !isNeighbourFound && current.move > 1 && queue.size() > 0) {
+                if (current.parent.equals(prevBoard)) {
+                    solution.push(current);
+                    isNeighbourFound = true;
+                } else {
+                    current = queue.delMin();
                 }
             }
 
-            solution.push(current);
-            //predecessors.add(current.board);
-        }
-    }
+            /*
+            //check neighbours
+            while (!isNeighbourFound && current.move > 1 && queue.size() > 0) {
+                for (Board b : neighbours) {
+                    if (b.equals(current.board)) {
+                        isNeighbourFound = true;
+                        break;
+                    }
+                }
 
-    private boolean containsDuplicate(Board board) {
-        for (Board b : predecessors ) {
-            if (b.equals(board)) {
-                return true;
+                if (isNeighbourFound) {
+                    solution.push(current);
+                }
+                else {
+                    current = queue.delMin();
+                }
             }
+
+            if (current.move == 1) {
+                while (solution.size() != 1) {
+                    solution.pop();
+                }
+
+                while (queue.size() > 0 && queue.min().move != 1) {
+                   queue.delMin();
+                }
+
+                moves = 1;
+                solution.push(current);
+            }*/
         }
-        return false;
+
+        while (current.parent != null) {
+            solution.push(current);
+            current = current.parent;
+        }
     }
 
     private int maxPriority(int currMax, int priority) {
@@ -123,8 +175,9 @@ public class Solver {
             list.add(solution.pop().board);
         }
         // List<Board> shallowCopy = list.subList(0, list.size());
-        Collections.reverse(list);
+        //Collections.reverse(list);
 
+        //return list;
         return list;
     } // sequence of boards in a shortest solution; null if unsolvable
     
